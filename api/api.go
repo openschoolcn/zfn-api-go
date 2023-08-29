@@ -154,3 +154,26 @@ func (c *Client) LoginWithKaptcha(loginKaptcha LoginKaptcha, password string, ka
 		},
 	}, nil
 }
+
+func (c *Client) Info () (models.Result, error) {
+	infoResp, err := c.Get(common.UrlJoin(c.BaseURL, InfoURL), map[string]string{"gnmkdm":"N100801"})
+	if err != nil {
+		return common.CatchReqError(InfoURL, err)
+	}
+	bodyReader := bytes.NewReader(infoResp.Body())
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
+	if err != nil {
+		return common.CatchLogicError("解析个人信息页响应失败", err)
+	}
+	tips := doc.Find("h5").Text()
+	if strings.Contains(tips, "用户登录") {
+		return common.CatchCustomError(1006,"未登录或登录过期")
+	}
+	return models.Result{
+		Code: 1000,
+		Msg:  "获取个人信息成功",
+		Data: map[string]interface{}{
+			
+		},
+	}, nil
+}
