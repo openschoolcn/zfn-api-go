@@ -3,19 +3,24 @@ package common
 import (
 	"fmt"
 	"log"
+
+	"github.com/openschoolcn/zfn-api-go/models"
 )
 
-func CatchReqError(url string, result map[string]interface{}, err error) (map[string]interface{}, error) {
+func CatchReqError(url string, err error) (models.Result, error) {
 	log.Default().Printf(fmt.Sprintf("请求%s失败", url))
-	result["code"] = 999
-	result["msg"] = "请求失败"
+	result := models.Result{
+		Code: 999,
+		Msg:  "请求失败",
+	}
 	return result, err
 }
 
-func CatchLogicError(url string, msg string, err error) (map[string]interface{}, error) {
-	log.Default().Printf(fmt.Sprintf("请求%s失败: %s", url, msg))
-	result := make(map[string]interface{})
-	result["code"] = 998
-	result["msg"] = msg
+func CatchLogicError(msg string, err error) (models.Result, error) {
+	log.Default().Printf(fmt.Sprintf("错误: %s", msg))
+	result := models.Result{
+		Code: 998,
+		Msg:  msg,
+	}
 	return result, err
 }

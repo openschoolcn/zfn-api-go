@@ -17,8 +17,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if result["code"].(int) == 1001 {
-		loginKaptcha := result["data"].(api.LoginKaptcha)
+	if result.Code == 1001 {
+		loginKaptcha := result.Data.(api.LoginKaptcha)
 		data, err := common.Base64Decode(loginKaptcha.KaptchaPic)
 		if err != nil {
 			log.Fatal(err)
@@ -34,7 +34,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if result["code"].(int) != 1000 {
+		if result.Code != 1000 {
 			log.Fatal(result)
 		}
 		fmt.Println(result)
