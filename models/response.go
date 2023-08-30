@@ -18,3 +18,25 @@ type StudentInfo struct {
 	MajorName       string `json:"major_name"`
 	ClassName       string `json:"class_name"`
 }
+
+type GradeCourse struct {
+	CourseId        string `json:"course_id"`
+	Title           string `json:"title"`
+	Teacher         string `json:"teacher"`
+	ClassName       string `json:"class_name"`
+	Credit          string `json:"credit"`
+	Category        string `json:"category"`
+	Nature          string `json:"nature"`
+	Grade           string `json:"grade"`
+	GradePoint      string `json:"grade_point"`
+	GradeNature     string `json:"grade_nature"`
+	TeachingCollege string `json:"teaching_college"`
+	Mark            string `json:"mark"`
+}
+
+type GradeInfo struct {
+	Year    int           `json:"year"`
+	Term    int           `json:"term"`
+	Count   int           `json:"count"`
+	Courses []GradeCourse `json:"courses"`
+}

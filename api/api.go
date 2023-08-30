@@ -2,8 +2,8 @@ package api
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/openschoolcn/zfn-api-go/common"
@@ -17,7 +17,7 @@ type LoginKaptcha struct {
 	Modulus    string            `json:"modulus"`
 	Exponent   string            `json:"exponent"`
 	KaptchaPic string            `json:"kaptcha_pic"`
-	Timestamp  int64             `json:"timestamp"`
+	Timestamp  string            `json:"timestamp"`
 }
 
 func (c *Client) Login(sid string, password string) (models.Result, error) {
@@ -100,7 +100,7 @@ func (c *Client) Login(sid string, password string) (models.Result, error) {
 			Modulus:    modulus,
 			Exponent:   exponent,
 			KaptchaPic: kaptcha,
-			Timestamp:  time.Now().Unix(),
+			Timestamp:  common.GetNowUnix(),
 		}}, nil
 }
 
@@ -272,5 +272,68 @@ func (c *Client) Info() (models.Result, error) {
 		Code: 1000,
 		Msg:  "获取个人信息成功",
 		Data: stuInfo,
+	}, nil
+}
+
+func (c *Client) Grade(year int, term int, usePersonalGrade bool) (models.Result, error) {
+	gradeURL := GradeURL
+	if usePersonalGrade {
+		gradeURL = PersonalGradeURL
+	}
+	reqTerm := ""
+	if term != 0 {
+		reqTerm = strconv.Itoa(term * term * 3)
+	}
+	gradeResp, err := c.Post(common.UrlJoin(c.BaseURL, gradeURL), map[string]string{
+		"xnm":                    strconv.Itoa(year),
+		"xqm":                    reqTerm,
+		"_search":                "false",
+		"nd":                     common.GetNowUnix(),
+		"queryModel.showCount":   "100",
+		"queryModel.currentPage": "1",
+		"queryModel.sortName":    "",
+		"queryModel.sortOrder":   "asc",
+		"time":                   "0",
+	}, false)
+	if err != nil {
+		return common.CatchReqError(gradeURL, err)
+	}
+	bodyReader := bytes.NewReader(gradeResp.Body())
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
+	if err != nil {
+		return common.CatchLogicError("解析成绩页响应失败", err)
+	}
+	if tips := doc.Find("h5").Text(); tips == "用户登录" {
+		return common.CatchCustomError(1006, "未登录或登录过期")
+	}
+	grade := gradeResp.String()
+	gradeMap := common.Str2Map(grade)
+	gradeInfo := models.GradeInfo{
+		Year: year,
+		Term: term,
+	}
+	gradeCourse := gradeMap["items"].([]interface{})
+	for _, item := range gradeCourse {
+		gradeCourseMap := item.(map[string]interface{})
+		gradeInfo.Courses = append(gradeInfo.Courses, models.GradeCourse{
+			CourseId:        common.GetString(gradeCourseMap, "kch_id"),
+			Title:           common.GetString(gradeCourseMap, "kcmc"),
+			Teacher:         common.GetString(gradeCourseMap, "jsxm"),
+			ClassName:       common.GetString(gradeCourseMap, "jxbmc"),
+			Credit:          common.GetString(gradeCourseMap, "xf"),
+			Category:        common.GetString(gradeCourseMap, "kclbmc"),
+			Nature:          common.GetString(gradeCourseMap, "kcxzmc"),
+			Grade:           common.GetString(gradeCourseMap, "cj"),
+			GradePoint:      common.GetString(gradeCourseMap, "jd"),
+			GradeNature:     common.GetString(gradeCourseMap, "ksxz"),
+			TeachingCollege: common.GetString(gradeCourseMap, "kkbmmc"),
+			Mark:            common.GetString(gradeCourseMap, "kcbj"),
+		})
+	}
+	gradeInfo.Count = len(gradeCourse)
+	return models.Result{
+		Code: 1000,
+		Msg:  "获取成绩成功",
+		Data: gradeInfo,
 	}, nil
 }

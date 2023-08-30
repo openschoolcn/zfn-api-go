@@ -68,4 +68,11 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(result)
+
+	// get student grade
+	result, err = client.Grade(2022, 1, true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result)
 }
