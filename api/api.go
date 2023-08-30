@@ -10,16 +10,6 @@ import (
 	"github.com/openschoolcn/zfn-api-go/models"
 )
 
-type LoginKaptcha struct {
-	Sid        string            `json:"sid"`
-	CsrfToken  string            `json:"csrf_token"`
-	Cookies    map[string]string `json:"cookies"`
-	Modulus    string            `json:"modulus"`
-	Exponent   string            `json:"exponent"`
-	KaptchaPic string            `json:"kaptcha_pic"`
-	Timestamp  string            `json:"timestamp"`
-}
-
 func (c *Client) Login(sid string, password string) (models.Result, error) {
 	// get csrf_token
 
@@ -93,7 +83,7 @@ func (c *Client) Login(sid string, password string) (models.Result, error) {
 	return models.Result{
 		Code: 1001,
 		Msg:  "获取验证码成功",
-		Data: LoginKaptcha{
+		Data: models.LoginKaptcha{
 			Sid:        sid,
 			CsrfToken:  csrfToken,
 			Cookies:    common.Cookie2Map(c.Cookies),
@@ -104,7 +94,7 @@ func (c *Client) Login(sid string, password string) (models.Result, error) {
 		}}, nil
 }
 
-func (c *Client) LoginWithKaptcha(loginKaptcha LoginKaptcha, password string, kaptcha string) (models.Result, error) {
+func (c *Client) LoginWithKaptcha(loginKaptcha models.LoginKaptcha, password string, kaptcha string) (models.Result, error) {
 	encryptPassword, _ := common.EncryptPassword(password, loginKaptcha.Modulus, loginKaptcha.Exponent)
 	loginMap := map[string]string{
 		"csrftoken": loginKaptcha.CsrfToken,

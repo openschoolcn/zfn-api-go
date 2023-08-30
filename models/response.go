@@ -6,6 +6,16 @@ type Result struct {
 	Data any    `json:"data"`
 }
 
+type LoginKaptcha struct {
+	Sid        string            `json:"sid"`
+	CsrfToken  string            `json:"csrf_token"`
+	Cookies    map[string]string `json:"cookies"`
+	Modulus    string            `json:"modulus"`
+	Exponent   string            `json:"exponent"`
+	KaptchaPic string            `json:"kaptcha_pic"`
+	Timestamp  string            `json:"timestamp"`
+}
+
 type StudentInfo struct {
 	Sid             string `json:"sid"`
 	Name            string `json:"name"`

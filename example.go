@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/openschoolcn/zfn-api-go/api"
 	"github.com/openschoolcn/zfn-api-go/common"
+	"github.com/openschoolcn/zfn-api-go/models"
 )
 
 const (
@@ -15,6 +17,15 @@ const (
 	Sid      = "your sid"
 	Password = "your password"
 )
+
+func display(result any) {
+	json, err := json.MarshalIndent(result, "", "    ")
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return
+	}
+	fmt.Println(string(json))
+}
 
 func main() {
 	cookies := []*http.Cookie{}
@@ -37,7 +48,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if result.Code == 1001 {
-			loginKaptcha := result.Data.(api.LoginKaptcha)
+			loginKaptcha := result.Data.(models.LoginKaptcha)
 			data, err := common.Base64Decode(loginKaptcha.KaptchaPic)
 			if err != nil {
 				log.Fatal(err)
@@ -54,11 +65,11 @@ func main() {
 				log.Fatal(err)
 			}
 			if result.Code != 1000 {
-				log.Fatal(result)
+				display(result)
 			}
-			fmt.Println(result)
+			display(result)
 		} else {
-			fmt.Println(result)
+			display(result)
 		}
 	}
 
@@ -67,12 +78,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(result)
+	display(result)
 
 	// get student grade
 	result, err = client.Grade(2022, 1, true)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(result)
+	display(result)
 }
