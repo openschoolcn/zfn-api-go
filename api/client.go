@@ -18,7 +18,7 @@ type ClientOptions struct {
 
 type Client struct {
 	ClientOptions
-	r *resty.Client
+	r       *resty.Client
 	Cookies []*http.Cookie    // cookies to be used for the requests
 	Headers map[string]string // headers to be used for the requests
 	Timeout int               // timeout for the requests
@@ -39,13 +39,14 @@ func (c *Client) Get(url string, query map[string]string) (resp *resty.Response,
 func (c *Client) Post(url string, data map[string]string, noRedirect bool) (resp *resty.Response, err error) {
 	c.r.SetTimeout(time.Duration(c.Timeout) * time.Second)
 	c.r.SetHeaders(c.Headers)
-
 	if noRedirect {
 		c.r.SetRedirectPolicy(resty.NoRedirectPolicy())
 	} else {
 		c.r.SetRedirectPolicy()
 	}
-
+	for _, cookie := range c.Cookies {
+		c.r.SetCookie(cookie)
+	}
 	resp, err = c.r.R().SetFormData(data).Post(url)
 	if err != nil && strings.Contains(err.Error(), "auto redirect is disabled") {
 		err = nil
