@@ -1,5 +1,10 @@
 .vscode
+dist/
 
 kaptcha.png
 
 .pwd
+
+config.json
+
+cookies.json
