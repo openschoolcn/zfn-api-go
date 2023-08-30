@@ -27,7 +27,7 @@ func TestBody2Map(t *testing.T) {
 		"modulus": "asdasdasdasdgadfa==",
 		"content": "你好我好大家好",
 	}
-	result := common.Body2Map(jsonBody)
+	result := common.Str2Map(jsonBody)
 	if result["success"] != expected["success"] {
 		t.Errorf("Expected %v, got %v", expected["success"], result["success"])
 	}

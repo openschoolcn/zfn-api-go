@@ -7,9 +7,9 @@ import (
 	"net/http"
 )
 
-func Body2Map(body string) map[string]interface{} {
+func Str2Map(jsonStr string) map[string]interface{} {
 	var result map[string]interface{}
-	err := json.Unmarshal([]byte(body), &result)
+	err := json.Unmarshal([]byte(jsonStr), &result)
 	if err != nil {
 		log.Fatal(err)
 		return nil

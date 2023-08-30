@@ -10,7 +10,6 @@ import (
 	"github.com/openschoolcn/zfn-api-go/models"
 )
 
-
 type LoginKaptcha struct {
 	Sid        string            `json:"sid"`
 	CsrfToken  string            `json:"csrf_token"`
@@ -47,7 +46,7 @@ func (c *Client) Login(sid string, password string) (models.Result, error) {
 	if err != nil {
 		return common.CatchReqError(KeyURL, err)
 	}
-	pubKey := common.Body2Map(keyResp.String())
+	pubKey := common.Str2Map(keyResp.String())
 	modulus := pubKey["modulus"].(string)
 	exponent := pubKey["exponent"].(string)
 	yzm := doc.Find("#yzmDiv").Text()
@@ -102,7 +101,7 @@ func (c *Client) Login(sid string, password string) (models.Result, error) {
 			Exponent:   exponent,
 			KaptchaPic: kaptcha,
 			Timestamp:  time.Now().Unix(),
-		}},nil
+		}}, nil
 }
 
 func (c *Client) LoginWithKaptcha(loginKaptcha LoginKaptcha, password string, kaptcha string) (models.Result, error) {
@@ -116,7 +115,7 @@ func (c *Client) LoginWithKaptcha(loginKaptcha LoginKaptcha, password string, ka
 	c.Cookies = common.Map2Cookie(loginKaptcha.Cookies)
 	loginResp, err := c.Post(common.UrlJoin(c.BaseURL, LoginURL), loginMap, true)
 	if err != nil {
-		return common.CatchReqError(LoginURL,  err)
+		return common.CatchReqError(LoginURL, err)
 	}
 	bodyReader := bytes.NewReader(loginResp.Body())
 	doc, err := goquery.NewDocumentFromReader(bodyReader)
@@ -152,5 +151,126 @@ func (c *Client) LoginWithKaptcha(loginKaptcha LoginKaptcha, password string, ka
 		Data: map[string]interface{}{
 			"cookies": cookies,
 		},
+	}, nil
+}
+
+func (c *Client) _Info() (models.Result, error) {
+	infoResp, err := c.Get(common.UrlJoin(c.BaseURL, InfoURL2), map[string]string{"gnmkdm": "N100801"})
+	if err != nil {
+		return common.CatchReqError(InfoURL2, err)
+	}
+	bodyReader := bytes.NewReader(infoResp.Body())
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
+	if err != nil {
+		return common.CatchLogicError("解析个人信息页响应失败", err)
+	}
+	tips := doc.Find("h5").Text()
+	if strings.Contains(tips, "用户登录") {
+		return common.CatchCustomError(1006, "未登录或登录过期")
+	}
+	pendingResult := make(map[string]interface{})
+	extractInfo := func(selection *goquery.Selection) (string, string) {
+		content := selection.Find("div .form-group")
+		key := strings.TrimSpace(content.Find("label").Eq(0).Text())
+		value := strings.TrimSpace(content.Find("p").Text())
+		if value == "" {
+			value = strings.TrimSpace(content.Find("label").Eq(1).Text())
+		}
+		return key, value
+	}
+	// 学生基本信息
+	doc.Find("div .col-sm-6").Each(func(i int, selection *goquery.Selection) {
+		key, value := extractInfo(selection)
+		pendingResult[key] = value
+	})
+	// 学生其它信息
+	doc.Find("div .col-sm-4").Each(func(i int, selection *goquery.Selection) {
+		key, value := extractInfo(selection)
+		pendingResult[key] = value
+	})
+	if _, exists := pendingResult["学号："]; !exists {
+		return models.Result{
+			Code: 1014,
+			Msg:  "当前学年学期无个人数据，您可能已经毕业了。如果是专升本同学，请使用专升本后的新学号登录～",
+		}, nil
+	}
+	stuInfo := models.StudentInfo{
+		Sid:             common.GetString(pendingResult, "学号："),
+		Name:            common.GetString(pendingResult, "姓名："),
+		Domicile:        common.GetString(pendingResult, "籍贯："),
+		PhoneNumber:     common.GetString(pendingResult, "手机号码："),
+		Email:           common.GetString(pendingResult, "电子邮箱："),
+		PoliticalStatus: common.GetString(pendingResult, "政治面貌："),
+		Nationality:     common.GetString(pendingResult, "民族："),
+		CollegeName:     common.GetString(pendingResult, "学院名称："),
+		MajorName:       common.GetString(pendingResult, "专业名称："),
+		ClassName:       common.GetString(pendingResult, "班级名称："),
+	}
+
+	if stuInfo.CollegeName == "" {
+		extraInfoReq, err := c.Post(common.UrlJoin(c.BaseURL, ExtraInfoURL), map[string]string{
+			"offDetails": "1", "gnmkdm": "N106005", "czdmKey": "00",
+		}, false)
+		if err != nil {
+			return common.CatchReqError(ExtraInfoURL, err)
+		}
+		bodyReader := bytes.NewReader(extraInfoReq.Body())
+		doc, err := goquery.NewDocumentFromReader(bodyReader)
+		if err != nil {
+			return common.CatchLogicError("解析额外信息页响应失败", err)
+		}
+		if tips := doc.Find("p .error_title").Text(); tips != "无功能权限，" {
+			// 通过学生证补办申请入口，来补全部分信息
+			doc.Find("div .col-sm-6").Each(func(i int, selection *goquery.Selection) {
+				key, value := extractInfo(selection)
+				pendingResult[key] = value
+			})
+			stuInfo.CollegeName = common.GetString(pendingResult, "学院")
+			stuInfo.MajorName = common.GetString(pendingResult, "专业")
+			stuInfo.ClassName = common.GetString(pendingResult, "班级")
+		}
+	}
+	return models.Result{
+		Code: 1000,
+		Msg:  "获取个人信息成功",
+		Data: stuInfo,
+	}, nil
+}
+
+func (c *Client) Info() (models.Result, error) {
+	infoResp, err := c.Get(common.UrlJoin(c.BaseURL, InfoURL1), map[string]string{"gnmkdm": "N100801"})
+	if err != nil {
+		return common.CatchReqError(InfoURL1, err)
+	}
+	if infoResp.String() == "null" {
+		return c._Info()
+	}
+	bodyReader := bytes.NewReader(infoResp.Body())
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
+	if err != nil {
+		return common.CatchLogicError("解析个人信息页响应失败", err)
+	}
+	tips := doc.Find("h5").Text()
+	if strings.Contains(tips, "用户登录") {
+		return common.CatchCustomError(1006, "未登录或登录过期")
+	}
+	info := infoResp.String()
+	infoMap := common.Str2Map(info)
+	stuInfo := models.StudentInfo{
+		Sid:             common.GetString(infoMap, "xh"),
+		Name:            common.GetString(infoMap, "xm"),
+		Domicile:        common.GetString(infoMap, "jg"),
+		PhoneNumber:     common.GetString(infoMap, "sjhm"),
+		Email:           common.GetString(infoMap, "dzyx"),
+		PoliticalStatus: common.GetString(infoMap, "zzmm"),
+		Nationality:     common.GetString(infoMap, "mzm"),
+		CollegeName:     common.GetString(infoMap, "zsjg_id", "jg_id"),
+		MajorName:       common.GetString(infoMap, "zszyh_id", "zyh_id"),
+		ClassName:       common.GetString(infoMap, "bh_id", "xjztdm"),
+	}
+	return models.Result{
+		Code: 1000,
+		Msg:  "获取个人信息成功",
+		Data: stuInfo,
 	}, nil
 }
