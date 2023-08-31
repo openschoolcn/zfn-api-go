@@ -327,3 +327,57 @@ func (c *Client) Grade(year int, term int, usePersonalGrade bool) (models.Result
 		Data: gradeInfo,
 	}, nil
 }
+
+func (c *Client) Schedule(year int, term int) (models.Result, error) {
+	reqTerm := ""
+	if term != 0 {
+		reqTerm = strconv.Itoa(term * term * 3)
+	}
+	scheduleResp, err := c.Post(common.UrlJoin(c.BaseURL, ScheduleURL), map[string]string{
+		"xnm": strconv.Itoa(year),
+		"xqm": reqTerm,
+	}, false)
+	if err != nil {
+		return common.CatchReqError(ScheduleURL, err)
+	}
+	bodyReader := bytes.NewReader(scheduleResp.Body())
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
+	if err != nil {
+		return common.CatchLogicError("解析课表页响应失败", err)
+	}
+	if tips := doc.Find("h5").Text(); tips == "用户登录" {
+		return common.CatchCustomError(1006, "未登录或登录过期")
+	}
+	schedule := scheduleResp.String()
+	scheduleMap := common.Str2Map(schedule)
+	scheduleInfo := models.ScheduleInfo{
+		Year: year,
+		Term: term,
+	}
+	scheduleCourse := scheduleMap["kbList"].([]interface{})
+	for _, item := range scheduleCourse {
+		scheduleCourseMap := item.(map[string]interface{})
+		scheduleInfo.Courses = append(scheduleInfo.Courses, models.ScheduleCourse{
+			CourseId:         common.GetString(scheduleCourseMap, "kch_id"),
+			Title:            common.GetString(scheduleCourseMap, "kcmc"),
+			Teacher:          common.GetString(scheduleCourseMap, "xm"),
+			ClassName:        common.GetString(scheduleCourseMap, "jxbmc"),
+			Credit:           common.GetString(scheduleCourseMap, "xf"),
+			Weekday:          common.GetString(scheduleCourseMap, "xqj"),
+			Sessions:         common.GetString(scheduleCourseMap, "jc"),
+			Weeks:            common.GetString(scheduleCourseMap, "zcd"),
+			EvaluationMode:   common.GetString(scheduleCourseMap, "khfsmc"),
+			Campus:           common.GetString(scheduleCourseMap, "xqmc"),
+			Place:            common.GetString(scheduleCourseMap, "cdmc"),
+			HoursComposition: common.GetString(scheduleCourseMap, "kcxszc"),
+			WeeklyHours:      common.GetString(scheduleCourseMap, "zhxs"),
+			TotalHours:       common.GetString(scheduleCourseMap, "zxs"),
+		})
+	}
+	scheduleInfo.Count = len(scheduleCourse)
+	return models.Result{
+		Code: 1000,
+		Msg:  "获取课表成功",
+		Data: scheduleInfo,
+	}, nil
+}

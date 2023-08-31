@@ -9,4 +9,5 @@ const (
 	ExtraInfoURL     = "xszbbgl/xszbbgl_cxXszbbsqIndex.html?doType=details&gnmkdm=N106005"
 	GradeURL         = "cjcx/cjcx_cxDgXscj.html?doType=query&gnmkdm=N305005"
 	PersonalGradeURL = "cjcx/cjcx_cxXsgrcj.html?doType=query&gnmkdm=N305005"
+	ScheduleURL      = "kbcx/xskbcx_cxXsKb.html?gnmkdm=N2151"
 )

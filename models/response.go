@@ -50,3 +50,27 @@ type GradeInfo struct {
 	Count   int           `json:"count"`
 	Courses []GradeCourse `json:"courses"`
 }
+
+type ScheduleCourse struct {
+	CourseId         string `json:"course_id"`
+	Title            string `json:"title"`
+	Teacher          string `json:"teacher"`
+	ClassName        string `json:"class_name"`
+	Credit           string `json:"credit"`
+	Weekday          string `json:"weekday"`
+	Sessions         string `json:"sessions"`
+	Weeks            string `json:"weeks"`
+	EvaluationMode   string `json:"evaluation_mode"`
+	Campus           string `json:"campus"`
+	Place            string `json:"place"`
+	HoursComposition string `json:"hours_composition"`
+	WeeklyHours      string `json:"weekly_hours"`
+	TotalHours       string `json:"total_hours"`
+}
+
+type ScheduleInfo struct {
+	Year    int              `json:"year"`
+	Term    int              `json:"term"`
+	Count   int              `json:"count"`
+	Courses []ScheduleCourse `json:"courses"`
+}

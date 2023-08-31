@@ -180,13 +180,37 @@ func main() {
 		},
 	}
 
+	var cmdSchedule = &cobra.Command{
+		Use:   "schedule",
+		Short: "Get schedule by year and term",
+		Run: func(cmd *cobra.Command, args []string) {
+			year, _ := cmd.Flags().GetInt("year")
+			term, _ := cmd.Flags().GetInt("term")
+			fmt.Printf("Fetching schedule for year: %d and term: %d\n", year, term)
+			result, err := client.Schedule(year, term)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if result.Code == 1006 {
+				interfaceLogin(config.Sid, config.Password)
+				result, err = client.Schedule(year, term)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			display(result)
+		},
+	}
+
 	cmdConfig.Flags().StringP("base_url", "b", "", "Base URL for API")
 	cmdLogin.Flags().StringP("sid", "u", "", "sid for login")
 	cmdLogin.Flags().StringP("password", "p", "", "Password for login")
 	cmdGrade.Flags().Int("year", 2022, "Year for fetching grade")
 	cmdGrade.Flags().Int("term", 0, "Term for fetching grade")
+	cmdSchedule.Flags().Int("year", 2022, "Year for fetching schedule")
+	cmdSchedule.Flags().Int("term", 0, "Term for fetching schedule")
 
-	rootCmd.AddCommand(cmdConfig, cmdLogin, cmdInfo, cmdGrade)
+	rootCmd.AddCommand(cmdConfig, cmdLogin, cmdInfo, cmdGrade, cmdSchedule)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
